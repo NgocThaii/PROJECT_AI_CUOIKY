@@ -1,0 +1,287 @@
+# TẠO DATA
+Bước 1: Lấy ảnh từ video
+import cv2
+cam = cv2.VideoCapture(0)
+cv2.namedWindow("test")
+img_counter = 15
+while True:
+    ret, frame = cam.read()
+    if not ret:
+        print("failed to grab frame")
+        break
+    cv2.imshow("test", frame)
+    k = cv2.waitKey(20)
+    if img_counter < 400:
+        rz_frame = cv2.resize(frame, (250,250), interpolation = cv2.INTER_AREA)
+        img_name = "E:/AI_CUOIKY/0/{}.jpg".format(img_counter)
+        cv2.imwrite(img_name, rz_frame)
+    else:
+        break
+    img_counter += 1
+cam.release()
+cv2.destroyAllWindows()
+
+Tạo labelling ( lấy tọa độ x, y của điểm huyệt sau đó lưu vào file excel train.csv )
+import cv2
+import pandas as pd
+import random
+COLUMNS = ['x1','y1','x2','y2','x3','y3','x4','y4','x5','y5','x6','y6','x7','y7','x8','y8','x9','y9','x10','y10']
+def click_event(event, x, y, flags, params):
+    global back_points
+    # checking for left mouse clicks
+    if event == cv2.EVENT_LBUTTONDOWN:
+        # print(x, ' ', y)
+        cv2.circle(img, (x, y), 2, (255, 100, 100), 2)
+        cv2.imshow(win_name, img)
+        back_points.append(x)
+        back_points.append(y)
+    # checking for right mouse clicks 
+    if event == cv2.EVENT_RBUTTONDOWN:
+        global num, columns
+        out = []
+        if len(back_points) == columns:
+            for i in range(num):
+                out.append(list(data.iloc[i]))
+            out.append(back_points)
+            for i in range(num + 1, rows):
+                out.append(list(data.iloc[i]))
+        else:
+            back_points = list(data.iloc[num])
+            for i in range(num + 1):
+                out.append(list(data.iloc[i]))
+        for i in range(num + 1, num + 15):
+            temp = []
+            for value in back_points:
+                temp.append(value + random.randint(-1, 1))
+            out.append(temp)        
+    
+        df = pd.DataFrame(out, columns = COLUMNS)
+        df.to_csv(CSV_PATH, index = False)
+        print("Saved back points in image " + str(num))
+# driver function
+if __name__=="__main__":
+    # Path of folder where contains images
+    IMAGES_PATH = 'E://CUOIKY_AI//Anh//'
+    # Path of folder where contains back points .csv
+    CSV_PATH = 'E://CUOIKY_AI//train.csv'
+    # Window name
+    win_name = 'image'
+    n = 0
+    start = 0
+    end = 500
+    num = 0
+    while True:
+        print('------------------------------------------------')
+data = pd.read_csv('train.csv',encoding = 'latin1')
+        data.astype(int)
+        print(data.shape)
+        rows, columns = data.shape
+        # print(list(range(rows)))
+        back_points = []
+        # reading the image
+        img = cv2.imread(IMAGES_PATH + str(num) + '.jpg', 0)
+        cv2.imshow(win_name, img)
+        print('Image ' + str(num))
+        # Draw back points which was labeled
+        if (num in list(range(rows))):
+            points = list(data.iloc[num])
+            points = [tuple(points[i : i + 2]) for i in range(0, len(points), 2)]
+            for x, y in points:
+                print(x, y)
+                cv2.circle(img, (int(x), int(y)), 2, (0, 0, 0), 2)
+            cv2.imshow(win_name, img)
+        # setting mouse handler for the image
+        # and calling the click_event() function
+        cv2.setMouseCallback(win_name, click_event)
+        # wait for a key to be pressed to exit
+        key = cv2.waitKey(0)
+        # print(key)
+        if (key == 97):
+            num -= 1
+            if num < start:
+                num = end
+        if (key == 113):
+            num += 1
+            if num > end:
+                num = start
+        if key == 27 or key == -1:
+            break
+        print(key)      
+    # close the window
+    cv2.destroyAllWindows()
+
+# Tạo file pickle
+import cv2
+import glob
+import numpy as np
+import pickle   
+x_train = []
+y_train = []
+for filename in glob.glob("E:/CUOIKY_AI/Anh/*.jpg"):
+    img = cv2.resize(cv2.imread(filename), (250,250))
+    x_train.append(img)
+x_train = np.array(x_train)
+with open("data.pickle", "wb") as f:
+    pickle.dump((x_train),f)
+
+
+# ODE COLAB
+# Import thư viện
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout, Conv2D, MaxPooling2D, Flatten
+from tensorflow.keras.optimizers import Adam
+from sklearn.preprocessing import StandardScaler
+from keras.utils import np_utils
+from sklearn.utils import shuffle
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import pickle
+import tensorflow as tf
+import pandas as pd
+
+# Kết nối tới google drive
+from google.colab import drive
+drive.mount('/content/drive', force_remount = True)
+X_DATA_PATH = '/content/drive/MyDrive/AI_CUOIKY_TEST2/data.pickle'
+Y_DATA_PATH = '/content/drive/MyDrive/AI_CUOIKY_TEST2/train.csv'
+
+import pandas as pd
+y_data = pd.read_csv(Y_DATA_PATH)
+y_data.head(None)
+import glob
+import pickle
+import numpy as np
+x_data = pickle.load(open(X_DATA_PATH, 'rb'))
+x_data = np.array(x_data, dtype = 'float')
+x_data /= 255
+print('Shape of x data: ', x_data.shape)
+
+import matplotlib.pylab as plt
+import pandas as pd
+import random
+import cv2
+
+n = x_data.shape[0]
+plt.figure(figsize = (15, 15))
+plt.subplots_adjust(hspace = .2)
+for i in range(6):
+    plt.subplot(3, 2, i + 1)
+    k = random.randint(0, 399)
+    img = x_data[k]
+    points = list(y_data.iloc[k])
+    points = [tuple(points[i : i + 2]) for i in range(0, len(points), 2)]
+    for x, y in points:
+        cv2.circle(img, (int(x), int(y)), 2, (0, 0, 0), 2)
+    plt.imshow(img)
+_ = plt.suptitle('Sample images', size = 20)
+
+
+from sklearn.model_selection import train_test_split
+import numpy as np
+#x_data = x_data.reshape(-1, (150,150), 1)
+input_shape = x_data.shape[1:4]
+y_data = np.array(y_data, dtype = 'float')
+num_class = y_data.shape[1]
+x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size = 0.1)
+print('Input shape: ', input_shape)
+print('Number of output: ', num_class)
+print('x train shape: ', x_train.shape)
+print('y train shape: ', y_train.shape)
+print('x test shape: ', x_test.shape)
+print('y test shape: ', y_test.shape)
+
+
+# Tạo model
+from keras.models import Sequential, load_model
+from keras.layers import Dense, Conv2D, Dropout, BatchNormalization, MaxPooling2D, Flatten, LeakyReLU, Convolution2D, MaxPool2D
+model = Sequential()
+
+model.add(Convolution2D(32, (3,3), padding='same', use_bias=False, input_shape = input_shape))
+model.add(LeakyReLU(alpha = 0.1))
+model.add(BatchNormalization())
+
+model.add(Convolution2D(32, (3,3), padding='same', use_bias=False))
+model.add(LeakyReLU(alpha = 0.1))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(2, 2)))
+
+model.add(Convolution2D(64, (3,3), padding='same', use_bias=False))
+model.add(LeakyReLU(alpha = 0.1))
+model.add(BatchNormalization())
+
+model.add(Convolution2D(64, (3,3), padding='same', use_bias=False))
+model.add(LeakyReLU(alpha = 0.1))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(2, 2)))
+model.add(Flatten())
+model.add(Dense(512, activation = 'relu'))
+# model.add(Dense(num_class, activation='softmax'))
+model.add(Dense(num_class))
+model.summary()
+
+
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+model.compile(
+    optimizer = 'Adam',
+    loss = "mean_squared_error",
+    metrics = ['mae']
+)
+
+
+# Training
+from tensorflow.keras.callbacks import EarlyStopping
+callback = EarlyStopping(monitor = 'val_mae', patience = 25)
+hist = model.fit(x_train, y_train, epochs = 2000, batch_size = 16, validation_split = 0.1).history
+
+# In độ chính xác
+final_loss, final_accuracy = model.evaluate(x_test, y_test)
+print('Final loss: {:.2f}'.format(final_loss))
+print('Final accuracy: {:.2f}'.format(final_accuracy))
+
+# Biểu đồ training với độ chính xác
+import pandas as pd
+import matplotlib.pylab as plt
+model_history = pd.DataFrame(hist)
+# add epoch column
+model_history['epoch'] = np.arange(1, len(model_history) + 1)
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize = (8, 10))
+epochs = model_history.shape[0]
+ax1.plot(np.arange(0, epochs), model_history['mae'], label = 'Training accuracy')
+ax1.plot(np.arange(0, epochs), model_history['val_mae'], label = 'Validation accuracy')
+ax1.legend(loc = 'lower right')
+ax1.set_ylabel('Accuracy')
+ax1.set_xlabel('Epoch')
+ax2.plot(np.arange(0, epochs), model_history['loss'], label = 'Training loss')
+ax2.plot(np.arange(0, epochs), model_history['val_loss'], label = 'Validation loss')
+ax2.legend(loc = 'upper right')
+ax2.set_ylabel('Loss')
+ax2.set_xlabel('Epoch')
+plt.tight_layout()
+plt.show()
+
+# Test ảnh
+import matplotlib.pylab as plt
+import pandas as pd
+import random
+import cv2
+
+n = x_data.shape[0]
+plt.figure(figsize = (25, 25))
+plt.subplots_adjust(hspace = .2)
+for i in range(4):
+  plt.subplot(3, 2, i + 1)
+  k = random.randint(0, 39)
+  img = x_test[k].reshape(250,250,3)
+  points = pred[k,:]
+  #points = [tuple(points[i : i + 2]) for i in range(0, len(points), 2)]
+  print(points)
+  for j in range(10):
+    cv2.circle(img, (int(points[j*2]), int(points[j*2+1])), 1, (255, 255, 0), 1)
+  plt.imshow(img)  
+
+_ = plt.suptitle('Sample images', size = 20)
+
+
+
+
